@@ -7,7 +7,7 @@ const COLUMNS = 7;
 
 interface State {
   turn: boolean;
-  grid: Array<Array<number>>
+  grid: Array<Array<number>>;
   winner: number;
 }
 
