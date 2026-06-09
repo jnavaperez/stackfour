@@ -8,8 +8,8 @@ export default defineConfig({
     host: true,         // Listen on all local IP addresses (0.0.0.0)
     port: 5173,         // Set a consistent port
     strictPort: true,   // Fail if the port is busy instead of picking a random one
-    // watch: {
-    //   usePolling: true, // Required for hot module replacement (HMR) to work in containers
-    // },
+    watch: {
+      usePolling: true, // Required for hot module replacement (HMR) to work in containers
+    },
   },
 })
