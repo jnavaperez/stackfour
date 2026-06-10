@@ -119,3 +119,7 @@ button {
   border-radius: 10px;
   border-width: 0;
 }
+
+button, div {
+  touch-action: manipulation; 
+}

@@ -45,8 +45,8 @@ function StackFour() {
   };
   const [persistent, setPersistent] = useState(p);
   
-  preload("/images/red_chip.svg");
-  preload("/images/blue_chip.svg");
+  preload("/images/red_chip.svg", {as: "image"});
+  preload("/images/blue_chip.svg", {as: "image"});
 
   return <div
     style={{
@@ -119,7 +119,11 @@ function StackFour() {
     <Confetti
       run={state.winner != 0}
       initialVelocityY={-20}
+      width={window.innerWidth*1.5}
+      height={window.innerHeight*1.5}
       style={{
+        width: "100vw",
+        height: "100vh",
         overflow: "hidden",
       }}
       key={persistent.gameNumber}
@@ -142,7 +146,6 @@ function connect4Drop(oldState: State, oldFlair: Flair, column: number, blue: bo
   }
   if (row != null) {
 
-    let hasWon = false;
     let winningGrid: Array<[number, number]> | null = null;
     determineWinning: {
       checkVertically: {
@@ -166,7 +169,6 @@ function connect4Drop(oldState: State, oldFlair: Flair, column: number, blue: bo
         }
         console.log("vertical sum " + sum)
         if (sum >= 4) {
-          hasWon = true;
           winningGrid = grid;
           break determineWinning;
         }
@@ -208,7 +210,6 @@ function connect4Drop(oldState: State, oldFlair: Flair, column: number, blue: bo
         }
         console.log("rightup sum " + sum);
         if (sum >= 4) {
-          hasWon = true;
           winningGrid = grid;
           break determineWinning;
         }
@@ -234,7 +235,6 @@ function connect4Drop(oldState: State, oldFlair: Flair, column: number, blue: bo
         }
         console.log("horizontal sum " + sum)
         if (sum >= 4) {
-          hasWon = true;
           winningGrid = grid;
           break determineWinning;
         }
@@ -276,7 +276,6 @@ function connect4Drop(oldState: State, oldFlair: Flair, column: number, blue: bo
         }
         console.log("leftup sum " + sum);
         if (sum >= 4) {
-          hasWon = true;
           winningGrid = grid;
           break determineWinning;
         }
@@ -350,7 +349,7 @@ function evaluateToChip(team: number, highlight: number) {
               case 1:
                 return "brightness(110%)"
               case 2:
-                return "contrast(90%) brightness(150%)"
+                return "contrast(80%) brightness(140%)"
             }
           })()}`
         }}
