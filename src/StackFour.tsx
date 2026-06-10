@@ -2,44 +2,34 @@
 import { useState } from "react";
 import { preload } from "react-dom";
 import Confetti from 'react-confetti'
+import ColumnComponent from "./ColumnComponent";
 
-const ROWS = 6;
-const COLUMNS = 7;
+export const ROWS = 6;
+export const COLUMNS = 7;
 
 
-interface State {
+interface GameState {
   turn: boolean;
   grid: Array<Array<number>>;
   winner: number;
+  winningElements: Array<Array<boolean> | null>,
 }
 
 interface Persistent {
   gameNumber: number;
 }
 
-interface Flair {
-  hoveredColumn: number | null,
-  winningGrid: Array<Array<boolean>>
-}
-
-function defaults(): [State, Flair] {
-  return [
-    {
+function defaultGameState(): GameState {
+  return {
       turn: Math.random() >= 0.5,
       grid: Array.from({ length: COLUMNS }, () => Array(ROWS).fill(0)),
       winner: 0,
-    },
-    {
-      hoveredColumn: null,
-      winningGrid: Array.from({ length: COLUMNS }, () => Array(ROWS).fill(false))
-    }
-  ]
+      winningElements: Array(COLUMNS).fill(null),
+  } 
 }
 
 function StackFour() {
-  const d = defaults();
-  const [state, setState] = useState(d[0]);
-  const [flair, setFlair] = useState(d[1]);
+  const [state, setState] = useState(defaultGameState);
   const p: Persistent = {
     gameNumber: 0
   };
@@ -72,42 +62,22 @@ function StackFour() {
       style={{
         display: "flex",
         flexDirection: "row",
-        // justifyContent: "center",
-        // alignItems: "center",
         flex: "0 0 200px"
       }}
     >
-      {state.grid.map((c: Array<number>, column) => (
-        <div
-          onMouseEnter={() => setFlair(setHoveredColumn(flair, column))}
-          onMouseLeave={() => setFlair(setHoveredColumn(flair, null))}
+      {state.grid.map((rowOfChips: Array<number>, index) => (
+        <ColumnComponent
+          rowOfChipColors={rowOfChips}
+          winningElements={state.winningElements[index]}
           onClick={() => {
-            const result = connect4Drop(state, flair, column, state.turn);
-            setState(result[0])
-            setFlair(result[1])
+            console.log("tuff alarm");
+            setState(connect4Drop(state,index,state.turn));
           }}
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: "15px",
-            padding: "8px"
-          }}
-        >
-          {c.map((v, row) => ( // _ is row
-            evaluateToChip(v,
-              state.winner === 0 ?
-                (flair.hoveredColumn === column ? 1 : 0)
-                :
-                (flair.winningGrid[column][row] ? 2 : 0)
-            )
-          ))}
-        </div>
+        />
       ))}
     </div>
     <button onClick={() => {
-      const d = defaults();
-      setState(d[0]);
-      setFlair(d[1]);
+      setState(defaultGameState());
       const per = structuredClone(persistent);
       per.gameNumber++;
       setPersistent(per);
@@ -131,56 +101,85 @@ function StackFour() {
   </div>
 }
 
-function connect4Drop(oldState: State, oldFlair: Flair, column: number, blue: boolean): [State, Flair] {
-  if (oldState.winner != 0) { return [oldState, oldFlair] }
+function connect4Drop(oldState: GameState,  column: number, blue: boolean): GameState {
+  if (oldState.winner != 0) { return oldState }
   const colorNum = blue ? 1 : 2;
-  const state = structuredClone(oldState);
-  const flair = structuredClone(oldFlair);
+  const state = {...oldState};
+  // const flair = structuredClone(oldFlair);
+  
+  const [newBoard, row] = dropChip(state.grid,colorNum,column);
+  state.grid = newBoard;
+
+  if (row != null) {
+    const winningGrid = checkForWinAndReturnWinningLocations(state.grid,colorNum,column,row)
+    if (winningGrid != null) {
+      console.log("WINNER!!!" + state.turn);
+      state.winner = colorNum;
+      const winnings = Array.from({length: COLUMNS},() => Array(ROWS).fill(false))
+      for (let i = 0; i < winningGrid.length; i++) {
+        winnings[winningGrid[i][0]][winningGrid[i][1]] = true;
+      }
+      state.winningElements = winnings;
+    } else {
+      state.turn = !state.turn;
+    } 
+  }
+  
+  // return [state,flair];
+  return state;
+}
+
+function dropChip(board:Array<Array<number>>,team:number,column:number): [Array<Array<number>>,number|null] {
   let row = null;
-  for (let cur = ROWS - 1; cur >= 0; cur--) {
-    if (state.grid[column][cur] === 0) {
-      state.grid[column][cur] = colorNum;
-      row = cur;
+  let newBoard = board;
+  for (let columnIndex = ROWS - 1; columnIndex >= 0; columnIndex--) {
+    if (board[column][columnIndex] === 0) {
+      row = columnIndex;
+      newBoard = [...board];
+      newBoard[column] = [...newBoard[column]];
+      newBoard[column][row] = team;
       break;
     }
   }
-  if (row != null) {
+  return [newBoard,row];
+}
 
+function checkForWinAndReturnWinningLocations(board:Array<Array<number>>,team:number,x1:number,y1:number) {
     let winningGrid: Array<[number, number]> | null = null;
     determineWinning: {
       checkVertically: {
-        let lastPos = row;
-        for (let y = row + 1; y < ROWS; y++) {
-          if (state.grid[column][y] == colorNum) {
+        let lastPos = y1;
+        for (let y = y1 + 1; y < ROWS; y++) {
+          if (board[x1][y] == team) {
             lastPos = y;
           } else {
             break;
           }
         }
         let sum = 0;
-        const grid: Array<[number, number]> = [];
+        const winningPos: Array<[number, number]> = [];
         for (let y = lastPos; y >= 0; y--) {
-          if (state.grid[column][y] == colorNum) {
+          if (board[x1][y] == team) {
             sum++;
-            grid.push([column, y])
+            winningPos.push([x1, y])
           } else {
             break;
           }
         }
         console.log("vertical sum " + sum)
         if (sum >= 4) {
-          winningGrid = grid;
+          winningGrid = winningPos;
           break determineWinning;
         }
       }
       checkDiagonalRightUp: {
-        let lastPosRow = row;
-        let lastPosColumn = column;
+        let lastPosRow = y1;
+        let lastPosColumn = x1;
         {
-          let y = row;
-          let x = column;
+          let y = y1 + 1;
+          let x = x1 - 1;
           while (y < ROWS && x >= 0) {
-            if (state.grid[x][y] == colorNum) {
+            if (board[x][y] == team) {
               lastPosColumn = x;
               lastPosRow = y;
             } else {
@@ -197,7 +196,7 @@ function connect4Drop(oldState: State, oldFlair: Flair, column: number, blue: bo
           let y = lastPosRow;
           let x = lastPosColumn;
           while (y >= 0 && x < COLUMNS) {
-            if (state.grid[x][y] == colorNum) {
+            if (board[x][y] == team) {
               console.log("analyzing " + x + y);
               grid.push([x, y])
               sum++;
@@ -214,39 +213,39 @@ function connect4Drop(oldState: State, oldFlair: Flair, column: number, blue: bo
           break determineWinning;
         }
       }
-      checkHorizontal: {
-        let lastPos = column;
-        for (let x = column + 1; x < COLUMNS; x++) {
-          if (state.grid[x][row] == colorNum) {
+      checkHorizontally: {
+        let lastPos = x1;
+        for (let x = x1 + 1; x < COLUMNS; x++) {
+          if (board[x][y1] == team) {
             lastPos = x;
           } else {
             break;
           }
         }
         let sum = 0;
-        const grid: Array<[number, number]> = [];
+        const winningPos: Array<[number, number]> = [];
         for (let x = lastPos; x >= 0; x--) {
-          if (state.grid[x][row] == colorNum) {
+          if (board[x][y1] == team) {
             sum++;
-            grid.push([x, row]);
+            winningPos.push([x, y1])
           } else {
             break;
           }
         }
         console.log("horizontal sum " + sum)
         if (sum >= 4) {
-          winningGrid = grid;
+          winningGrid = winningPos;
           break determineWinning;
         }
       }
       checkDiagonalLeftUp: {
-        let lastPosRow = row;
-        let lastPosColumn = column;
+        let lastPosRow = y1;
+        let lastPosColumn = x1;
         {
-          let y = row;
-          let x = column;
-          while (y < ROWS && x < COLUMNS) {
-            if (state.grid[x][y] == colorNum) {
+          let y = y1 + 1;
+          let x = x1 + 1;
+          while (y >= 0 && x < COLUMNS) {
+            if (board[x][y] == team) {
               lastPosColumn = x;
               lastPosRow = y;
             } else {
@@ -262,10 +261,12 @@ function connect4Drop(oldState: State, oldFlair: Flair, column: number, blue: bo
         {
           let y = lastPosRow;
           let x = lastPosColumn;
-          while (y >= 0 && x >= 0) {
-            if (state.grid[x][y] == colorNum) {
+          console.log("evil error: "+x)
+          console.log(board)
+          while (y < ROWS && x >= 0) {
+            if (board[x][y] == team) {
               console.log("analyzing " + x + y);
-              grid.push([x, y]);
+              grid.push([x, y])
               sum++;
             } else {
               break;
@@ -281,107 +282,7 @@ function connect4Drop(oldState: State, oldFlair: Flair, column: number, blue: bo
         }
       }
     }
-    if (winningGrid != null) {
-      console.log("WINNER!!!" + state.turn);
-      state.winner = colorNum;
-      for (let i = 0; i < winningGrid.length; i++) {
-        flair.winningGrid[winningGrid[i][0]][winningGrid[i][1]] = true;
-      }
-    } else {
-      state.turn = !state.turn;
-    }
-  }
-  return [state, flair];
-}
-
-function evaluateToChip(team: number, highlight: number) {
-  if (highlight == 2) { console.log("died" + team) }
-  switch (team) {
-    case 0:
-      return <div
-        style={{
-          width: "50px",
-          height: "50px",
-          backgroundColor: `${(() => {
-            switch (highlight) {
-              case 0:
-                return "lightsteelblue"
-              case 1:
-                return "color-mix(in srgb, lightsteelblue 60%, white)"
-              case 2:
-                console.log("RED ALERT")
-            }
-          })()}`,
-          borderRadius: "50%",
-        }}></div>;
-    case 1:
-      return <img
-        src="/images/blue_chip.svg"
-        draggable="false"
-        style={{
-          userSelect: "none",
-          width: "50px",
-          height: "50px",
-          filter: `${(() => {
-            switch (highlight) {
-              case 0:
-                return ""
-              case 1:
-                return "brightness(110%)"
-              case 2:
-                return "brightness(200%)"
-            }
-          })()}`
-        }}
-      ></img>;
-    case 2:
-      return <img
-        src="/images/red_chip.svg"
-        draggable="false"
-        style={{
-          userSelect: "none",
-          width: "50px",
-          height: "50px",
-          filter: `${(() => {
-            switch (highlight) {
-              case 0:
-                return ""
-              case 1:
-                return "brightness(110%)"
-              case 2:
-                return "contrast(80%) brightness(140%)"
-            }
-          })()}`
-        }}
-      ></img>;
-  }
-}
-
-// function evaluateToColor(team:number, highlight:boolean) {
-//   let color = "";
-//   switch (team) {
-//     case 0:
-//       if (highlight) {
-//         return "color-mix(in srgb, lightsteelblue 60%, white";
-//       } else {
-//         return "lightsteelblue";
-//       }
-//     case 1:
-//       color = "dodgerblue"; break;
-//     case 2:
-//       color = "crimson"; break;
-//   }
-//   if (highlight) {
-//     return "color-mix(in srgb, "+color+" 70%, white"
-//   } else {
-//     return color
-//   }
-// }
-
-function setHoveredColumn(flair: Flair, hovered: number | null) {
-  const newFlair = structuredClone(flair);
-  newFlair.hoveredColumn = hovered;
-  return newFlair;
+  return winningGrid;
 }
 
 export default StackFour
