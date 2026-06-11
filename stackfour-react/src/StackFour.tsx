@@ -68,6 +68,7 @@ function StackFour() {
     >
       {state.grid.map((rowOfChips: Array<number>, index) => (
         <ColumnComponent
+          key={index}
           rowOfChipColors={rowOfChips}
           winningElements={state.winningElements[index]}
           onClick={() => {setState(connect4Drop(state,index,state.turn));}}
