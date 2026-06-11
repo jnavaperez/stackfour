@@ -1,5 +1,5 @@
 /* eslint-disable no-unused-labels */
-import { useState } from "react";
+import React, { useState } from "react";
 import { preload } from "react-dom";
 import Confetti from 'react-confetti'
 import ColumnComponent from "./ColumnComponent";
@@ -45,7 +45,8 @@ function StackFour() {
       alignItems: "center",
       height: "100vh",
       flexDirection: "column",
-      gap: "10px"
+      gap: "10px",
+      position:"relative",
     }}
   >
     <b style={{

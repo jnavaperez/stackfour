@@ -1,0 +1,29 @@
+@keyframes drop-piece {
+  0% {
+    transform: translateY(calc(-1 * var(--drop-distance)));
+  }
+
+  50% {
+    transform: translateY(0);
+  }
+
+  75% {
+    transform: translateY(-20px);
+  }
+
+  83% {
+    transform: translateY(0);
+  }
+
+  95% {
+    transform: translateY(-8px);
+  }
+
+  100% {
+    transform: translateY(0);
+  }
+}
+
+.piece-dropping {
+    animation: drop-piece 0.3s ease-in;
+}

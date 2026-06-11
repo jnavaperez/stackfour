@@ -17,26 +17,52 @@ const ColumnComponent = React.memo(function ColumnComponent({onClick, rowOfChipC
         return c
     }
     
-    return <div
-        onMouseEnter={() => setColumn(setHighlight(true))}
-        onMouseLeave={() => setColumn(setHighlight(false))}
-        onClick={onClick}
-        style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: "15px",
-        padding: "8px"
-        }}
-    >
-        {rowOfChipColors.map((v:number, i:number) => 
-            <Chip
-                team = {v}
-                highlight={ winningElements == null ?
-                    (columnState.highlighted ? 1 : 0) :
-                    (winningElements[i] ? 2 : 0)
-                }
-            />
-        )}
+    return <div style={{position:"relative"}}>
+        <div style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "15px",
+            padding: "8px"
+        }}>
+            {rowOfChipColors.map(()=>(
+                <div
+                    style={{
+                    width: "50px",
+                    height: "50px",
+                    backgroundColor: `${
+                        columnState.highlighted && winningElements == null ?
+                            "color-mix(in srgb, lightsteelblue 60%, white)"
+                        :
+                            "lightsteelblue"}`,
+                    borderRadius: "50%",
+                }}/>
+            ))}
+        </div>
+        <div
+            onMouseEnter={() => setColumn(setHighlight(true))}
+            onMouseLeave={() => setColumn(setHighlight(false))}
+            onClick={onClick}
+            style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "15px",
+                padding: "8px",
+
+                position: "absolute",
+                top: 0,
+                right: 0,
+            }}
+        >
+            {rowOfChipColors.map((v:number, i:number) => 
+                <Chip
+                    team = {v}
+                    highlight={ winningElements == null ?
+                        (columnState.highlighted ? 1 : 0) :
+                        (winningElements[i] ? 2 : 0)
+                    }
+                />
+            )}
+        </div>
     </div>
 })
 
