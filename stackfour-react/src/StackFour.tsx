@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { preload } from "react-dom";
 import Confetti from 'react-confetti'
 import ColumnComponent from "./ColumnComponent";

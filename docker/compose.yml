@@ -1,0 +1,14 @@
+services:
+  frontend:
+    build:
+      dockerfile: ../docker/Dockerfile-react
+      context: ../stackfour-react
+    ports:
+      - "8080:8080"
+  backend:
+    build:
+      dockerfile: ../docker/Dockerfile-server
+      context: ../stackfour-server
+    ports:
+      - "8081:8081"
+  
