@@ -148,11 +148,11 @@ export function connect4Drop(oldState: GameState,  column: number, blue: boolean
   const state = {...oldState};
   // const flair = structuredClone(oldFlair);
   
-  const [newBoard, row] = dropChip(state.grid,colorNum,column);
-  state.grid = newBoard;
+  const [newBoard, row] = dropChip(state.board,colorNum,column);
+  state.board = newBoard;
 
   if (row != null) {
-    const winningGrid = checkForWinAndReturnWinningLocations(state.grid,colorNum,column,row)
+    const winningGrid = checkForWinAndReturnWinningLocations(state.board,colorNum,column,row)
     if (winningGrid != null) {
       console.log("WINNER!!!" + state.turn);
       state.winner = colorNum;
@@ -160,7 +160,7 @@ export function connect4Drop(oldState: GameState,  column: number, blue: boolean
       for (let i = 0; i < winningGrid.length; i++) {
         winnings[winningGrid[i][0]][winningGrid[i][1]] = true;
       }
-      state.winningElements = winnings;
+      state.winning_elements = winnings;
     } else {
       state.turn = !state.turn;
     } 

@@ -1,92 +1,150 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { preload } from "react-dom";
-import Confetti from 'react-confetti'
-import ColumnComponent from "./ColumnComponent";
-import { connect4Drop } from "./gameplay"
+import Confetti from 'react-confetti';
+import { ClockLoader} from 'react-spinners';
+import GameBoard from "./GameBoard";
+// import { connect4Drop } from "./gameplay"
 
 export const ROWS = 6;
 export const COLUMNS = 7;
 
-
 export interface GameState {
-  turn: boolean;
-  grid: Array<Array<number>>;
+  turn: number;
+  board: Array<Array<number>>;
   winner: number;
-  winningElements: Array<Array<boolean> | null>,
+  winning_elements: Array<Array<boolean>>,
+}
+
+export interface GameInfo {
+  id: string;
+  team: boolean;
 }
 
 interface PersistentState {
-  gameNumber: number;
-}
-
-function defaultGameState(): GameState {
-  return {
-      turn: Math.random() >= 0.5,
-      grid: Array.from({ length: COLUMNS }, () => Array(ROWS).fill(0)),
-      winner: 0,
-      winningElements: Array(COLUMNS).fill(null),
-  } 
+  confettiKey: number;
 }
 
 function StackFour() {
-  const [state, setState] = useState(defaultGameState);
-  const p: PersistentState = {
-    gameNumber: 0
-  };
-  const [persistent, setPersistent] = useState(p);
+  const [gameInfo, setGameInfo] = useState<GameInfo|string|null>(null)
+  const [gameState, setGameState] = useState<GameState|null>(null);
+  const [prevWinState, setPrevWinState] = useState(false);
+
+  const [persistent, setPersistent] = useState<PersistentState>({
+    confettiKey: 1
+  });
   
   preload("/images/red_chip.svg", {as: "image"});
   preload("/images/blue_chip.svg", {as: "image"});
+  
+  useEffect(() => {(async () => {
+    console.log("Contacting server for initial game state...");
+    try {
+      const response = await fetch("http://localhost:8081/api/games", {method: "POST"});
 
-  return <div
-    style={{
-      display: "flex",
-      justifyContent: "center",
-      alignItems: "center",
-      height: "100vh",
-      flexDirection: "column",
-      gap: "10px",
-      position:"relative",
-    }}
-  >
-    <b style={{
-      color: `${state.turn ? "deepskyblue" : "#ff1e1a"}`,
-      fontSize: "32px",
-      padding: "5px"
-    }}>
-      {state.winner === 0 ?
-        "it's " + (state.turn ? "blue" : "red") + "'s turn"
-        : (state.winner === 1 ? "blue" : "red") + " wins!"
+      if (!response.ok) {
+        setGameInfo(`HTTP Error! Status: ${response.status}`)
+        throw new Error(`HTTP Error! Status: ${response.status}`)
       }
-    </b>
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "row",
-        flex: "0 0 200px"
-      }}
-    >
-      {state.grid.map((rowOfChips: Array<number>, index) => (
-        <ColumnComponent
-          key={index}
-          rowOfChipColors={rowOfChips}
-          winningElements={state.winningElements[index]}
-          onClick={() => {setState(connect4Drop(state,index,state.turn));}}
-        />
-      ))}
-    </div>
-    <button onClick={() => {
-      setState(defaultGameState());
-      const per = structuredClone(persistent);
-      per.gameNumber++;
-      setPersistent(per);
-    }}
-    >
-      restart game
-    </button>
+      
+      const result: {
+        id: string,
+        state: GameState
+      } = await response.json();
 
+      console.log("server returned initial state");
+      console.log(result);
+      setGameInfo({id:result.id, team:true});      
+      setGameState(result.state)
+    } catch (error) {
+      setGameInfo(`Error in fetching! ${error}`);
+    }
+
+  })()},[])
+  
+  useEffect(() => {
+    let isMounted = true;
+    let timerId: number | undefined;
+    console.log("i am running");
+    
+    async function poll() {
+      if (gameInfo != null && typeof gameInfo != "string") {
+        try {
+          const response = await fetch(`http://localhost:8081/api/games/${gameInfo.id}`, {method: "GET"});
+
+          if (!response.ok) {
+            setGameInfo(`HTTP Error! Status: ${response.status}`)
+            throw new Error(`HTTP Error! Status: ${response.status}`)
+          }
+          
+          const result: GameState = await response.json();
+          if (isMounted) {
+            setGameState(result)
+          }
+        } catch (error) {
+          setGameInfo(`Error in fetching! ${error}`);
+        } finally {
+          if (isMounted) {
+            timerId = setTimeout(poll, 1000)
+          }
+        }
+      } 
+    }
+    
+    poll();
+
+    return () => {
+      isMounted = false;
+      clearTimeout(timerId);
+    };
+  }, [gameInfo]);
+  
+  const currentWinState = typeof gameInfo != "string" && gameState != null && gameState.winner != 0;
+  if (currentWinState != prevWinState) {
+    setPrevWinState(currentWinState)
+    if (currentWinState == false) {
+      setPersistent((old) => {
+        old.confettiKey += 1;
+        return old
+      })        
+      console.log("changing key")
+    }
+  }
+
+  return <div>
+    {gameInfo == null ?
+      <div style={{
+        display:"flex",
+        justifyContent:"center",
+        alignItems:"center",
+        height:"100vh",
+      }}>
+        <ClockLoader
+          color={"lightgray"}
+        />
+      </div>
+    : (typeof gameInfo == "string") ?  
+      <div style={{
+        display:"flex",
+        justifyContent:"center",
+        alignItems:"center",
+        height:"100vh",
+      }}>        
+        <b>{gameInfo}</b>
+      </div>
+    : (gameState != null) ?
+      <GameBoard
+        state={gameState}
+        // id={(() => {console.log(gameInfo.id); return gameInfo.id})()}
+        id={gameInfo.id}
+        setGameInfo={setGameInfo}
+        setGameState={setGameState}
+      />
+    : 
+      <div>null gamestate</div>
+    }
+    
     <Confetti
-      run={state.winner != 0}
+      run={gameState != null && typeof gameInfo != "string" && gameState.winner != 0}
       initialVelocityY={-20}
       width={window.innerWidth*1.5}
       height={window.innerHeight*1.5}
@@ -95,7 +153,7 @@ function StackFour() {
         height: "100vh",
         overflow: "hidden",
       }}
-      key={persistent.gameNumber}
+      key={persistent.confettiKey}
     />
   </div>
 }

@@ -24,8 +24,9 @@ const ColumnComponent = React.memo(function ColumnComponent({onClick, rowOfChipC
             gap: "15px",
             padding: "8px"
         }}>
-            {rowOfChipColors.map(()=>(
+            {rowOfChipColors.map((_,i)=>(
                 <div
+                    key={i}
                     style={{
                     width: "50px",
                     height: "50px",
@@ -55,6 +56,7 @@ const ColumnComponent = React.memo(function ColumnComponent({onClick, rowOfChipC
         >
             {rowOfChipColors.map((v:number, i:number) => 
                 <Chip
+                    key={i}
                     team = {v}
                     highlight={ winningElements == null ?
                         (columnState.highlighted ? 1 : 0) :
