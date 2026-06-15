@@ -4,21 +4,19 @@ pub fn drop_chip(state: &mut GameState, column: usize, team: Team) {
     let board = &mut state.board;
     let mut row = None;
     for (i, chip_team) in board[column].iter_mut().enumerate().rev() {
-        if matches!(chip_team, Team::None) {
+        if *chip_team == Team::None {
             row = Some(i);
             *chip_team = team;
+            state.num_pieces += 1;
             break;
         }
     }
 
-    for i in board.iter() {
-        for v in i {
-            print!("{}", *v as u8)
-        }
-        print!("\n")
-    }
-
     if let Some(row) = row {
+        if state.num_pieces == COLUMNS * ROWS {
+            state.winner = Team::Both; // tie game
+            return;
+        }
         if let Some(winners) = check_for_winner(&board,team,column,row) {
             dbg!(&winners);
             state.winner = team;

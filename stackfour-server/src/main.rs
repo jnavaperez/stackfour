@@ -16,11 +16,12 @@ use tracing_subscriber::util::SubscriberInitExt;
 
 mod json_layouts;
 mod gameplay;
+mod tests;
 
 const ROWS:usize = 6;
 const COLUMNS:usize = 7;
 
-#[derive(Default, Serialize_repr, Deserialize_repr, Clone, Copy, PartialEq, Eq)]
+#[derive(Default, Serialize_repr, Deserialize_repr, Clone, Copy, PartialEq, Eq, Debug)]
 #[repr(u8)]
 enum Team {
     #[default] None,
@@ -34,6 +35,7 @@ type GameBoard = [[Team; ROWS]; COLUMNS];
 struct GameState {
     turn: Team,
     board: GameBoard,
+    num_pieces: usize,
     winner: Team,
     winning_elements: [[bool; ROWS]; COLUMNS]
 }
@@ -42,6 +44,7 @@ impl GameState {
         GameState {
             turn: if rand::random_bool(0.5) {Team::Blue} else {Team::Red},
             board: Default::default(),
+            num_pieces: Default::default(),
             winner: Default::default(),
             winning_elements: Default::default(),
         }
