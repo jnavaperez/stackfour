@@ -1,12 +1,13 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { preload } from "react-dom";
 import Confetti from 'react-confetti';
 import { ClockLoader} from 'react-spinners';
 import GameBoard from "./GameBoard";
-// import { connect4Drop } from "./gameplay"
 
 export const ROWS = 6;
 export const COLUMNS = 7;
+
+const API = import.meta.env.VITE_API_URL;
 
 export interface GameState {
   turn: number;
@@ -39,7 +40,7 @@ function StackFour() {
   useEffect(() => {(async () => {
     console.log("Contacting server for initial game state...");
     try {
-      const response = await fetch("http://localhost:8081/api/games", {method: "POST"});
+      const response = await fetch(`${API}/api/games`, {method: "POST"});
 
       if (!response.ok) {
         setGameInfo(`HTTP Error! Status: ${response.status}`)
@@ -69,7 +70,7 @@ function StackFour() {
     async function poll() {
       if (gameInfo != null && typeof gameInfo != "string") {
         try {
-          const response = await fetch(`http://localhost:8081/api/games/${gameInfo.id}`, {method: "GET"});
+          const response = await fetch(`${API}/api/games/${gameInfo.id}`, {method: "GET"});
 
           if (!response.ok) {
             setGameInfo(`HTTP Error! Status: ${response.status}`)
@@ -98,7 +99,7 @@ function StackFour() {
     };
   }, [gameInfo]);
   
-  const currentWinState = typeof gameInfo != "string" && gameState != null && gameState.winner != 0;
+  const currentWinState = typeof gameInfo != "string" && gameState != null && gameState.winner != 0 && gameState.winner != 3;
   if (currentWinState != prevWinState) {
     setPrevWinState(currentWinState)
     if (currentWinState == false) {
@@ -132,19 +133,33 @@ function StackFour() {
         <b>{gameInfo}</b>
       </div>
     : (gameState != null) ?
-      <GameBoard
-        state={gameState}
-        // id={(() => {console.log(gameInfo.id); return gameInfo.id})()}
-        id={gameInfo.id}
-        setGameInfo={setGameInfo}
-        setGameState={setGameState}
-      />
+      <div style={{
+        position: "relative",
+        display:"flex",
+        justifyContent:"left"
+      }}>
+        <b style={{color:"gray",fontSize:"15px",padding:"5px 10px"}}>instance id: {gameInfo.id}</b>
+        <GameBoard
+          state={gameState}
+          // id={(() => {console.log(gameInfo.id); return gameInfo.id})()}
+          id={gameInfo.id}
+          setGameInfo={setGameInfo}
+          setGameState={setGameState}
+          
+          style={{
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%)"
+          }}
+        />
+      </div>
     : 
       <div>null gamestate</div>
     }
     
     <Confetti
-      run={gameState != null && typeof gameInfo != "string" && gameState.winner != 0}
+      run={currentWinState}
       initialVelocityY={-20}
       width={window.innerWidth*1.5}
       height={window.innerHeight*1.5}

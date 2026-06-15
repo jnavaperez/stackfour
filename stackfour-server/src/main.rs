@@ -21,6 +21,11 @@ mod tests;
 const ROWS:usize = 6;
 const COLUMNS:usize = 7;
 
+#[cfg(not(docker))]
+const LISTENING_ADDRESS: &'static str = "127.0.0.1:8081";
+#[cfg(docker)]
+const LISTENING_ADDRESS: &'static str = "0.0.0.0:8081";
+
 #[derive(Default, Serialize_repr, Deserialize_repr, Clone, Copy, PartialEq, Eq, Debug)]
 #[repr(u8)]
 enum Team {
@@ -111,10 +116,11 @@ async fn main() {
         .route("/api/games/{id}", get(get_game))
         .route("/api/games/{id}/drop", post(drop_piece))
         .route("/api/games/{id}/restart", post(restart_game))
+        .route("/health", get(|| async {"ok"}))
         .with_state(data)
         .layer(CorsLayer::new().allow_methods(Any).allow_origin(Any).allow_headers(Any))
         .layer(TraceLayer::new_for_http());
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:8081").await.unwrap();
+    let listener = tokio::net::TcpListener::bind(LISTENING_ADDRESS).await.unwrap();
     println!("Listening on: {}", listener.local_addr().unwrap());
     axum::serve(listener, app).await.unwrap();
 }

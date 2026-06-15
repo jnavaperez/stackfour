@@ -1,15 +1,22 @@
 import { type GameState, type GameInfo } from "./StackFour";
 import ColumnComponent from "./ColumnComponent";
 import type { Dispatch, SetStateAction } from "react";
+import type React from "react";
+
+const API = import.meta.env.VITE_API_URL;
 
 interface props {
     state:GameState;
     id:string;
     setGameInfo:Dispatch<SetStateAction<GameInfo | string | null>>;
-    setGameState:Dispatch<SetStateAction<GameState | null>>   
+    setGameState:Dispatch<SetStateAction<GameState | null>>;
+    style?: React.CSSProperties;
 }
 
-function GameBoard({ state, id, setGameInfo, setGameState }:props) {
+if (import.meta.env.DEV) console.log("DEV MODE");
+else if (import.meta.env.PROD) console.log("PROD MODE");
+
+function GameBoard({ state, id, setGameInfo, setGameState, style }:props) {
   return <div
     style={{
       display: "flex",
@@ -18,17 +25,22 @@ function GameBoard({ state, id, setGameInfo, setGameState }:props) {
       height: "100vh",
       flexDirection: "column",
       gap: "10px",
-      position:"relative",
+      ...style
     }}
   >
     <b style={{
-      color: `${state.turn == 1 ? "deepskyblue" : "#ff1e1a"}`,
+      color: `${state.winner === 3 ? "lightgray" :
+        (state.turn == 1 ? "deepskyblue" : "#ff1e1a")
+      }`,
       fontSize: "32px",
       padding: "5px"
     }}>
       {state.winner === 0 ?
         "it's " + (state.turn == 1 ? "blue" : "red") + "'s turn"
-        : (state.winner === 1 ? "blue" : "red") + " wins!"
+      :state.winner === 3 ?
+        "it's a tie!"
+      :
+        (state.winner === 1 ? "blue" : "red") + " wins!"
       }
     </b>
     <div
@@ -47,7 +59,7 @@ function GameBoard({ state, id, setGameInfo, setGameState }:props) {
             if (state.winner != 0) return
             console.log("requesting a drop");
             try {
-                const response = await fetch(`http://localhost:8081/api/games/${id}/drop`, {
+                const response = await fetch(`${API}/api/games/${id}/drop`, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
@@ -75,7 +87,7 @@ function GameBoard({ state, id, setGameInfo, setGameState }:props) {
     <button onClick={async () => {
         console.log("restarting game..");
         try {
-            const response = await fetch(`http://localhost:8081/api/games/${id}/restart`, {
+            const response = await fetch(`${API}/api/games/${id}/restart`, {
                 method: "POST"
             });
 
