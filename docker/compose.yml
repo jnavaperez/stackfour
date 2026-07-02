@@ -11,4 +11,20 @@ services:
       context: ../stackfour-server
     ports:
       - "8081:8081"
+  db:
+    image: postgres:latest
+    restart: always
+    environment:
+      POSTGRES_USER: uncle
+      POSTGRES_PASSWORD: paul2
+      POSTGRES_DB: data
+    ports:
+      - "5432:5432"
+    volumes:
+     - pgdata:/var/lib/postgresql
+
+volumes:
+  pgdata:
+
+
   

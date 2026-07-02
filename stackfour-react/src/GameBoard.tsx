@@ -8,6 +8,7 @@ const API = import.meta.env.VITE_API_URL;
 interface props {
     state:GameState;
     id:string;
+    team: number;
     setGameInfo:Dispatch<SetStateAction<GameInfo | string | null>>;
     setGameState:Dispatch<SetStateAction<GameState | null>>;
     style?: React.CSSProperties;
@@ -16,7 +17,7 @@ interface props {
 if (import.meta.env.DEV) console.log("DEV MODE");
 else if (import.meta.env.PROD) console.log("PROD MODE");
 
-function GameBoard({ state, id, setGameInfo, setGameState, style }:props) {
+function GameBoard({ state, id, team, setGameInfo, setGameState, style }:props) {
   return <div
     style={{
       display: "flex",
@@ -29,18 +30,18 @@ function GameBoard({ state, id, setGameInfo, setGameState, style }:props) {
     }}
   >
     <b style={{
-      color: `${state.winner === 3 ? "lightgray" :
+      color: `${state.winner === "Tie" ? "lightgray" :
         (state.turn == 1 ? "deepskyblue" : "#ff1e1a")
       }`,
       fontSize: "32px",
       padding: "5px"
     }}>
-      {state.winner === 0 ?
+      {state.winner === "None" ?
         "it's " + (state.turn == 1 ? "blue" : "red") + "'s turn"
-      :state.winner === 3 ?
+      :state.winner === "Tie" ?
         "it's a tie!"
       :
-        (state.winner === 1 ? "blue" : "red") + " wins!"
+        (state.winner === "Blue" ? "blue" : "red") + " wins!"
       }
     </b>
     <div
@@ -54,9 +55,10 @@ function GameBoard({ state, id, setGameInfo, setGameState, style }:props) {
         <ColumnComponent
           key={index}
           rowOfChipColors={rowOfChips}
-          winningElements={state.winner == 0 ? null : state.winning_elements[index]}
+          winningElements={state.winner}
           onClick={async () => {
-            if (state.winner != 0) return
+            if (state.winner != "None") return
+            if (state.turn != team) return
             console.log("requesting a drop");
             try {
                 const response = await fetch(`${API}/api/games/${id}/drop`, {

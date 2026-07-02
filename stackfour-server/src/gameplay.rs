@@ -1,4 +1,5 @@
 use crate::{GameBoard, GameState, Team, COLUMNS, ROWS};
+use crate::types::Winner;
 
 pub fn drop_chip(state: &mut GameState, column: usize, team: Team) {
     let board = &mut state.board;
@@ -13,16 +14,20 @@ pub fn drop_chip(state: &mut GameState, column: usize, team: Team) {
     }
 
     if let Some(row) = row {
-        if state.num_pieces == COLUMNS * ROWS {
-            state.winner = Team::Both; // tie game
+        if state.num_pieces == (COLUMNS * ROWS) as i16 {
+            state.winner = Winner::Tie;
             return;
         }
         if let Some(winners) = check_for_winner(&board,team,column,row) {
-            dbg!(&winners);
-            state.winner = team;
+            let mut winning_chips = [[false;ROWS];COLUMNS];
             for (x,y) in winners {
-                state.winning_elements[x][y] = true;
+                winning_chips[x][y] = true;
             }
+            state.winner = match team {
+                Team::Red => Winner::Red{winning_chips},
+                Team::Blue => Winner::Blue{winning_chips},
+                _ => unreachable!()
+            };
         } else {
             state.turn = if matches!(state.turn, Team::Blue) {Team::Red} else {Team::Blue};
         }

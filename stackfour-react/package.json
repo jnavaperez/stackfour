@@ -13,6 +13,7 @@
     "react": "^19.2.6",
     "react-confetti": "^6.4.0",
     "react-dom": "^19.2.6",
+    "react-router": "^8.1.0",
     "react-spinners": "^0.17.0"
   },
   "devDependencies": {
