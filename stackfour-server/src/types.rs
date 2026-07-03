@@ -27,6 +27,7 @@ impl Team {
 }
 
 #[derive(Default, Serialize, Deserialize, Clone, Debug)]
+#[serde(tag = "team")]
 pub enum Winner {
     #[default]
     None,

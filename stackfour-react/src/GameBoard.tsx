@@ -30,18 +30,18 @@ function GameBoard({ state, id, team, setGameInfo, setGameState, style }:props) 
     }}
   >
     <b style={{
-      color: `${state.winner === "Tie" ? "lightgray" :
+      color: `${state.winner.team === "Tie" ? "lightgray" :
         (state.turn == 1 ? "deepskyblue" : "#ff1e1a")
       }`,
       fontSize: "32px",
       padding: "5px"
     }}>
-      {state.winner === "None" ?
+      {state.winner.team === "None" ?
         "it's " + (state.turn == 1 ? "blue" : "red") + "'s turn"
-      :state.winner === "Tie" ?
+      :state.winner.team === "Tie" ?
         "it's a tie!"
       :
-        (state.winner === "Blue" ? "blue" : "red") + " wins!"
+        (state.winner.team === "Blue" ? "blue" : "red") + " wins!"
       }
     </b>
     <div
@@ -55,9 +55,14 @@ function GameBoard({ state, id, team, setGameInfo, setGameState, style }:props) 
         <ColumnComponent
           key={index}
           rowOfChipColors={rowOfChips}
-          winningElements={state.winner}
+          winningElements={
+            state.winner.team == "Red" || state.winner.team == "Blue" ?
+              state.winner.winning_chips[index]
+            :
+              null
+          }
           onClick={async () => {
-            if (state.winner != "None") return
+            if (state.winner.team != "None") return
             if (state.turn != team) return
             console.log("requesting a drop");
             try {
@@ -78,6 +83,7 @@ function GameBoard({ state, id, team, setGameInfo, setGameState, style }:props) 
                 }
                 
                 const result: GameState = await response.json();
+                console.log(result);
                 setGameState(result)
             } catch (error) {
                 setGameInfo(`Error in fetching! ${error}`);

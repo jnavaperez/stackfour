@@ -13,7 +13,7 @@ const API = import.meta.env.VITE_API_URL;
 export interface GameState {
   turn: number;
   board: Array<Array<number>>;
-  winner: string;
+  winner: Winner;
 }
 
 export interface GameInfo {
@@ -24,6 +24,12 @@ export interface GameInfo {
 interface PersistentState {
   confettiKey: number;
 }
+
+type Winner = 
+  | { team: "None" }
+  | { team: "Blue", winning_chips: boolean[][]}
+  | { team: "Red", winning_chips: boolean[][]}
+  | { team: "Tie" }
 
 function StackFour() {
   const [gameInfo, setGameInfo] = useState<GameInfo|string|null>(null)
@@ -158,7 +164,7 @@ function StackFour() {
   //   };
   // }, [gameInfo]);
   
-  const currentWinState = typeof gameInfo != "string" && gameState != null && gameState.winner != "None" && gameState.winner != "Tie";
+  const currentWinState = typeof gameInfo != "string" && gameState != null && gameState.winner.team != "None" && gameState.winner.team != "Tie";
   if (currentWinState != prevWinState) {
     setPrevWinState(currentWinState)
     if (currentWinState == false) {
@@ -200,14 +206,9 @@ function StackFour() {
         minHeight: "100vh"
       }}>
         <b style={{color:"gray",fontSize:"15px",padding:"5px 10px", maxHeight:"15px"}}>instance id: {gameInfo.game_id}</b>
-        {/* <b style={{color:"gray", fontSize:"20px", padding:"15px"}}><br/>team: </b>
-        <b style={{
-          color: gameInfo.team == 1 ? "deepskyblue" : "#ff1e1a",
-          fontSize: "20px",
-          padding: "15px 0px"
-        }}>{gameInfo.team == 1 ? "Blue" : "Red"}</b></p> */}
         <GameBoard
           state={gameState}
+          // @ts-expect-error - playerID is guaranteed to not be undefined if they are even seeing the gameboard 
           id={searchParams.get("playerId")}
           team={gameInfo.team}
           setGameInfo={setGameInfo}

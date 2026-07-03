@@ -3,8 +3,8 @@ import Chip from "./Chip"
 
 interface returnType {
     onClick: React.MouseEventHandler<HTMLElement>,
-    rowOfChipColors: Array<number>,
-    winningElements: Array<boolean> | null,
+    rowOfChipColors: number[],
+    winningElements: boolean[] | null,
 }
 
 const ColumnComponent = React.memo(function ColumnComponent({onClick, rowOfChipColors, winningElements}: returnType) {
