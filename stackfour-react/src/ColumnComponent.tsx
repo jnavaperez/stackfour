@@ -5,9 +5,10 @@ interface returnType {
     onClick: React.MouseEventHandler<HTMLElement>,
     rowOfChipColors: number[],
     winningElements: boolean[] | null,
+    doHighlighting: boolean,
 }
 
-const ColumnComponent = React.memo(function ColumnComponent({onClick, rowOfChipColors, winningElements}: returnType) {
+const ColumnComponent = React.memo(function ColumnComponent({onClick, rowOfChipColors, winningElements, doHighlighting}: returnType) {
     const [columnState, setColumn] = useState({
         highlighted: false,
     });
@@ -31,7 +32,7 @@ const ColumnComponent = React.memo(function ColumnComponent({onClick, rowOfChipC
                     width: "50px",
                     height: "50px",
                     backgroundColor: `${
-                        columnState.highlighted && winningElements == null ?
+                        doHighlighting && columnState.highlighted && winningElements == null ?
                             "color-mix(in srgb, lightsteelblue 60%, white)"
                         :
                             "lightsteelblue"}`,
@@ -59,7 +60,7 @@ const ColumnComponent = React.memo(function ColumnComponent({onClick, rowOfChipC
                     key={i}
                     team = {v}
                     highlight={ winningElements == null ?
-                        (columnState.highlighted ? 1 : 0) :
+                        (columnState.highlighted && doHighlighting ? 1 : 0) :
                         (winningElements[i] ? 2 : 0)
                     }
                 />

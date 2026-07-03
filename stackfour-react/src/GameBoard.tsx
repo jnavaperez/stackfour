@@ -61,6 +61,7 @@ function GameBoard({ state, id, team, setGameInfo, setGameState, style }:props) 
             :
               null
           }
+          doHighlighting={state.turn == team && state.winner.team == "None"}
           onClick={async () => {
             if (state.winner.team != "None") return
             if (state.turn != team) return
