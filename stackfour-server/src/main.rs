@@ -43,7 +43,7 @@ const LISTENING_ADDRESS: &'static str = "0.0.0.0:8081";
 async fn main() {
     let pool = PgPoolOptions::new()
         .max_connections(5)
-        .connect(concat!("postgres://uncle:paul2@","localhost:5432","/data")).await.unwrap();
+        .connect(concat!("postgres://uncle:paul2@","db:5432","/data")).await.unwrap();
 
     pool.execute("\
 CREATE TABLE IF NOT EXISTS games (
