@@ -101,7 +101,7 @@ pub struct GameInfo {
 pub struct SqlError(sqlx::Error);
 impl IntoResponse for SqlError {
     fn into_response(self) -> Response {
-        (StatusCode::INTERNAL_SERVER_ERROR, self.0.to_string()).into_response()
+        (StatusCode::IM_A_TEAPOT, self.0.to_string()).into_response()
     }
 }
 impl From<sqlx::Error> for SqlError {

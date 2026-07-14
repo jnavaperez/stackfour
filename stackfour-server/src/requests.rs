@@ -1,14 +1,17 @@
+use std::sync::Arc;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::Json;
-use sqlx::{query, query_as};
+use sqlx::{query, query_as, PgPool};
 use uuid::Uuid;
-use crate::{gameplay, json_layouts, DBPool, COLUMNS};
+use crate::{gameplay, json_layouts, COLUMNS, INSTANCE_ID};
 use crate::json_layouts::NewGameRequest;
 use crate::sql_utils::array_2d_into_1d;
 use crate::types::{GameInfo, GameState, GameStateSQL, SqlError, Team, Winner};
 
-pub async fn new_game(State(pool): DBPool, Json(payload): Json<NewGameRequest>) -> Result<Json<GameInfo>,SqlError> {
+type DBPool = State<Arc<PgPool>>;
+
+pub async fn new_game(State(pool): DBPool, Json(payload): Json<NewGameRequest>) -> Result<Json<(GameInfo, Uuid)>,SqlError> {
     println!("received new game request");
 
     if let Some(player_id) = payload.id { // attempt to reconnect if already has a player_id
@@ -25,12 +28,15 @@ WHERE player_id = $1")
                 .bind(&player_id)
                 .fetch_optional(&*pool).await?;
             if let Some(gstate_sql) = gstate_sql {
-                return Ok(Json(GameInfo {
-                    player_id,
-                    team,
-                    game_id,
-                    state: gstate_sql.into_gamestate()
-                }));
+                return Ok(Json((
+                   GameInfo {
+                        player_id,
+                        team,
+                        game_id,
+                        state: gstate_sql.into_gamestate()
+                    },
+                    *INSTANCE_ID
+                )));
             } else {
                 query("DELETE FROM players WHERE player_id = $1")
                     .bind(player_id)
@@ -75,15 +81,18 @@ RETURNING player_id;")
         .bind(if gstate_sql.lonely {gstate_sql.turn.opposite()} else {gstate_sql.turn})
         .bind(gstate_sql.game_id)
         .fetch_one(&*pool).await?;
-    Ok(Json(GameInfo {
-        player_id: pdata,
-        game_id: gstate_sql.game_id,
-        team: if gstate_sql.lonely {gstate_sql.turn.opposite()} else {gstate_sql.turn},
-        state: gstate_sql.into_gamestate()
-    }))
+    Ok(Json((
+        GameInfo {
+            player_id: pdata,
+            game_id: gstate_sql.game_id,
+            team: if gstate_sql.lonely {gstate_sql.turn.opposite()} else {gstate_sql.turn},
+            state: gstate_sql.into_gamestate()
+        },
+        *INSTANCE_ID
+    )))
 }
 
-pub async fn get_game(Path(player_id):Path<Uuid>, State(pool): DBPool) -> Result<Json<GameState>,SqlError> {
+pub async fn get_game(Path(player_id):Path<Uuid>, State(pool): DBPool) -> Result<Json<(GameState,Uuid)>,SqlError> {
     println!("received get game request");
     dbg!(&player_id);
     let gstate_sql: GameStateSQL = query_as("
@@ -92,10 +101,10 @@ JOIN games ON games.game_id = players.game
 WHERE player_id = $1")
         .bind(&player_id)
         .fetch_one(&*pool).await?;
-    Ok(Json(gstate_sql.into_gamestate()))
+    Ok(Json((gstate_sql.into_gamestate(),*INSTANCE_ID)))
 }
 
-pub async fn drop_piece(Path(player_id):Path<Uuid>, State(pool): DBPool, Json(payload):Json<json_layouts::DropChipRequest>) -> Result<Json<GameState>,(StatusCode, String)> {
+pub async fn drop_piece(Path(player_id):Path<Uuid>, State(pool): DBPool, Json(payload):Json<json_layouts::DropChipRequest>) -> Result<Json<(GameState,Uuid)>,(StatusCode, String)> {
     println!("received drop piece request");
     if payload.column >= COLUMNS {
         return Err((StatusCode::BAD_REQUEST, "Column requested exceeds max amount of columns".to_string()));
@@ -142,10 +151,10 @@ RETURNING *")
         })
         .fetch_one(&*pool).await.map_err(|e|(StatusCode::BAD_REQUEST, e.to_string()))?;
 
-    Ok(Json(updated_gstate_sql.into_gamestate()))
+    Ok(Json((updated_gstate_sql.into_gamestate(),*INSTANCE_ID)))
 }
 
-pub async fn restart_game(Path(player_id):Path<Uuid>, State(pool): DBPool) -> Result<Json<GameState>,SqlError> {
+pub async fn restart_game(Path(player_id):Path<Uuid>, State(pool): DBPool) -> Result<Json<(GameState,Uuid)>,SqlError> {
     println!("recieved restart game request");
 
     let gstate_sql: GameStateSQL = query_as("
@@ -163,5 +172,5 @@ RETURNING *;")
         .bind(player_id)
         .fetch_one(&*pool).await?;
 
-    Ok(Json(gstate_sql.into_gamestate()))
+    Ok(Json((gstate_sql.into_gamestate(),*INSTANCE_ID)))
 }

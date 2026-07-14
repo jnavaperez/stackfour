@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::sync::{Arc, LazyLock};
 use axum::{Json, Router};
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
@@ -31,16 +31,17 @@ const ROWS:usize = 6;
 const COLUMNS:usize = 7;
 
 #[cfg(not(docker))]
-static LISTENING_ADDRESS: &'static str = "127.0.0.1:8081";
+const LISTENING_ADDRESS: &'static str = "127.0.0.1:8081";
 
 #[cfg(docker)]
 const LISTENING_ADDRESS: &'static str = "0.0.0.0:8081";
 
-
+static INSTANCE_ID: LazyLock<Uuid> = LazyLock::new(|| Uuid::new_v4());
 
 
 #[tokio::main]
 async fn main() {
+    println!("instance id: {}",*INSTANCE_ID);
     let pool = PgPoolOptions::new()
         .max_connections(5)
         .connect(concat!("postgres://uncle:paul2@","db:5432","/data")).await.unwrap();
@@ -92,4 +93,3 @@ CREATE TABLE IF NOT EXISTS players (
 //     // lonely_games: Vec<Uuid>
 //     game: GameInfo,
 // }
-type DBPool = State<Arc<PgPool>>;

@@ -8,7 +8,7 @@ import GameBoard from "./GameBoard";
 export const ROWS = 6;
 export const COLUMNS = 7;
 
-const API = import.meta.env.VITE_API_URL;
+const API = import.meta.env.VITE_API_URL + (8081+Math.round(Math.random())).toString();
 
 export interface GameState {
   turn: number;
@@ -34,6 +34,7 @@ type Winner =
 function StackFour() {
   const [gameInfo, setGameInfo] = useState<GameInfo|string|null>(null)
   const [gameState, setGameState] = useState<GameState|null>(null);
+  const [serverId, setServerId] = useState<string>("");
   const [prevWinState, setPrevWinState] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -55,13 +56,14 @@ function StackFour() {
     let plrId: string;
     async function fetchData() {
       try {
+        const p_id = searchParams.get("playerId")
         const response = await fetch(`${API}/api/games`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            id: searchParams.get("playerId")
+            id: p_id == undefined ? null : p_id
           })
         });
 
@@ -70,16 +72,17 @@ function StackFour() {
           throw new Error(`HTTP Error! Status: ${response.status}`)
         }
         
-        const result: {
+        const [result, serverId]: [{
           player_id: string,
           game_id: string,
           team: number,
           state: GameState
-        } = await response.json();
+        }, string] = await response.json();
 
         console.log("server returned initial state");
         console.log(result);
-        setGameInfo({game_id:result.game_id, team:result.team});      
+        setGameInfo({game_id:result.game_id, team:result.team});
+        setServerId(serverId);
         setSearchParams({ playerId: result.player_id })
         plrId = result.player_id;
         setGameState(result.state);
@@ -101,14 +104,16 @@ function StackFour() {
           throw response
         }
         
-        const result: GameState = await response.json();
+        const result: [GameState, string] = await response.json();
         if (isMounted) {
-          setGameState(result)
+          setGameState(result[0]);
+          setServerId(result[1]);
         }
       } catch (error) {
         // if (error instanceof Response && error.url == `${API}/api/games/${searchParams.get("playerId")}`) {
         if (error instanceof Response) {
           setGameInfo(`HTTP Error! Status: ${error.status}, URL: ${error.url}`)
+          return;
         }
       } finally {
         if (isMounted) {
@@ -205,7 +210,7 @@ function StackFour() {
         backgroundImage: `linear-gradient(to top, ${gameInfo.team == 1 ? "midnightblue" : "rgb(80, 10, 15)"} 0%, rgba(0,0,255,0) 50%)`,
         minHeight: "100vh"
       }}>
-        <b style={{color:"gray",fontSize:"15px",padding:"5px 10px", maxHeight:"15px"}}>instance id: {gameInfo.game_id}</b>
+        <b style={{color:"gray",fontSize:"15px",padding:"5px 10px", maxHeight:"15px"}}>instance id: {serverId}<br/>game id: {gameInfo.game_id}</b>
         <GameBoard
           state={gameState}
           // @ts-expect-error - playerID is guaranteed to not be undefined if they are even seeing the gameboard 
@@ -213,6 +218,7 @@ function StackFour() {
           team={gameInfo.team}
           setGameInfo={setGameInfo}
           setGameState={setGameState}
+          setServerId={setServerId}
           
           style={{
             position: "absolute",

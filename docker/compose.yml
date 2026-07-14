@@ -10,7 +10,7 @@ services:
       dockerfile: ../docker/Dockerfile-server
       context: ../stackfour-server
     ports:
-      - "8081:8081"
+      - "8081-8084:8081"
   db:
     image: postgres:latest
     restart: always

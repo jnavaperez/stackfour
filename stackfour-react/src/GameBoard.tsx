@@ -3,7 +3,7 @@ import ColumnComponent from "./ColumnComponent";
 import type { Dispatch, SetStateAction } from "react";
 import type React from "react";
 
-const API = import.meta.env.VITE_API_URL;
+const API = import.meta.env.VITE_API_URL + (8081 + Math.round(Math.random())) ;
 
 interface props {
     state:GameState;
@@ -11,13 +11,14 @@ interface props {
     team: number;
     setGameInfo:Dispatch<SetStateAction<GameInfo | string | null>>;
     setGameState:Dispatch<SetStateAction<GameState | null>>;
+    setServerId:Dispatch<SetStateAction<string>>;
     style?: React.CSSProperties;
 }
 
 if (import.meta.env.DEV) console.log("DEV MODE");
 else if (import.meta.env.PROD) console.log("PROD MODE");
 
-function GameBoard({ state, id, team, setGameInfo, setGameState, style }:props) {
+function GameBoard({ state, id, team, setGameInfo, setGameState, setServerId, style }:props) {
   return <div
     style={{
       display: "flex",
@@ -83,9 +84,10 @@ function GameBoard({ state, id, team, setGameInfo, setGameState, style }:props) 
                     throw new Error(`HTTP Error! Status: ${response.status}`)
                 }
                 
-                const result: GameState = await response.json();
+                const result: [GameState, string] = await response.json();
                 console.log(result);
-                setGameState(result)
+                setGameState(result[0])
+                setServerId(result[1])
             } catch (error) {
                 setGameInfo(`Error in fetching! ${error}`);
             }
@@ -105,8 +107,9 @@ function GameBoard({ state, id, team, setGameInfo, setGameState, style }:props) 
                 throw new Error(`HTTP Error! Status: ${response.status}`)
             }
             
-            const result: GameState = await response.json();
-            setGameState(result)
+            const result: [GameState,string] = await response.json();
+            setGameState(result[0])
+            setServerId(result[1])
         } catch (error) {
             setGameInfo(`Error in fetching! ${error}`);
         }
