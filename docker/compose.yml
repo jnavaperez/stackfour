@@ -4,7 +4,7 @@ services:
       dockerfile: ../docker/Dockerfile-react
       context: ../stackfour-react
     ports:
-      - "80:80"
+      - "80-83:80"
   backend:
     build:
       dockerfile: ../docker/Dockerfile-server
