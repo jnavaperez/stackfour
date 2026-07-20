@@ -62,7 +62,7 @@ impl GameStateSQL {
             winner: match self.winner {
                 Team::None => Winner::None, Team::Both => Winner::Tie,
                 Team::Blue => Winner::Blue{winning_chips:*board_vec_into_2d_array(&self.winning_pieces.unwrap())},
-                Team::Red => Winner::Blue{winning_chips:*board_vec_into_2d_array(&self.winning_pieces.unwrap())},
+                Team::Red => Winner::Red{winning_chips:*board_vec_into_2d_array(&self.winning_pieces.unwrap())},
             }
         }
     }
