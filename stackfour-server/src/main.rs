@@ -66,7 +66,7 @@ WHERE lonely = true;
 CREATE TABLE IF NOT EXISTS players (
     player_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     team INT2 NOT NULL,
-    game UUID REFERENCES games(game_id)
+    game UUID REFERENCES games(game_id) ON DELETE CASCADE
 )
 ").await.unwrap();
 
@@ -89,22 +89,32 @@ CREATE TABLE IF NOT EXISTS players (
 
     tokio::spawn(async move {
         loop {
-            let q = query("
+            if let Err(e) = 'result: { // RUST PLEASE HURRY UP AND ADD TRY BLOCKS
+                let mut tx = match data.begin().await {
+                    Ok(tx) => tx,
+                    Err(e) => break 'result Err(e),
+                };
+
+                let q = query("
 DELETE FROM games
 WHERE last_accessed < now() - INTERVAL '30 minutes';
 ").execute(&*data).await;
-            if let Err(e) = q {
-                eprintln!("error in inactive game cleanup request: {}", e);
-            }
+                if let Err(e) = q {
+                    break 'result Err(e);
+                }
 
-            let q = query("
-DELETE FROM players
-WHERE NOT EXISTS (
-    SELECT 1 FROM games
-    WHERE games.game_id = players.game
-);
-").execute(&*data).await;
-            if let Err(e) = q {
+//                 let q = query("
+// DELETE FROM players
+// WHERE NOT EXISTS (
+//     SELECT 1 FROM games
+//     WHERE games.game_id = players.game
+// );
+// ").execute(&*data).await;
+//                 if let Err(e) = q {
+//                     break 'result Err(e);
+//                 }
+                break 'result tx.commit().await;
+            } {
                 eprintln!("error in inactive game cleanup request: {}", e);
             }
 
