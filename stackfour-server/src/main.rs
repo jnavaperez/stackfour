@@ -1,4 +1,5 @@
 use std::sync::{Arc, LazyLock};
+use std::time::Duration;
 use axum::{Json, Router};
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
@@ -10,6 +11,7 @@ use serde_repr::{Deserialize_repr, Serialize_repr};
 use sqlx::{query, query_as, Executor, PgPool};
 use sqlx::postgres::PgPoolOptions;
 use tokio::sync::Mutex;
+use tokio::time::sleep;
 use uuid::Uuid;
 use tower_http::cors::{Any, CorsLayer};
 use tower_http::trace::TraceLayer;
@@ -54,7 +56,8 @@ CREATE TABLE IF NOT EXISTS games (
     board INT2[42] NOT NULL DEFAULT array_fill(0, ARRAY[42]),
     num_pieces INT2 NOT NULL DEFAULT 0,
     winner INT2 NOT NULL DEFAULT 0,
-    winning_pieces BOOL[42]
+    winning_pieces BOOL[42],
+    last_accessed TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE UNIQUE INDEX IF NOT EXISTS lonely_games
 ON games ((1))
@@ -79,10 +82,36 @@ CREATE TABLE IF NOT EXISTS players (
         .route("/api/games/{id}/drop", post(requests::drop_piece))
         .route("/api/games/{id}/restart", post(requests::restart_game))
         .route("/health", get(|| async {"ok"}))
-        .with_state(data)
+        .with_state(data.clone())
         .layer(CorsLayer::new().allow_methods(Any).allow_origin(Any).allow_headers(Any))
         .layer(TraceLayer::new_for_http());
     let listener = tokio::net::TcpListener::bind(LISTENING_ADDRESS).await.unwrap();
+
+    tokio::spawn(async move {
+        loop {
+            let q = query("
+DELETE FROM games
+WHERE last_accessed < now() - INTERVAL '30 minutes';
+").execute(&*data).await;
+            if let Err(e) = q {
+                eprintln!("error in inactive game cleanup request: {}", e);
+            }
+
+            let q = query("
+DELETE FROM players
+WHERE NOT EXISTS (
+    SELECT 1 FROM games
+    WHERE games.game_id = players.game
+);
+").execute(&*data).await;
+            if let Err(e) = q {
+                eprintln!("error in inactive game cleanup request: {}", e);
+            }
+
+            sleep(Duration::from_secs(30)).await;
+        }
+    });
+
     println!("Listening on: {}", listener.local_addr().unwrap());
     axum::serve(listener, app).await.unwrap();
 }
