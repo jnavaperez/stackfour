@@ -4,11 +4,10 @@ import Confetti from 'react-confetti';
 import { ClockLoader} from 'react-spinners';
 import { useSearchParams } from "react-router";
 import GameBoard from "./GameBoard";
+import * as Requests from "./requests"
 
 export const ROWS = 6;
 export const COLUMNS = 7;
-
-const API = import.meta.env.VITE_API_URL + (8081+Math.round(Math.random())).toString();
 
 export interface GameState {
   turn: number;
@@ -51,66 +50,48 @@ function StackFour() {
       hasFetchedInitial.current = true
       return
     };
+    Requests.setStateFunctions(setGameInfo, setServerId);
     console.log("Contacting server for initial game state...");
     const controller = new AbortController;
-    let plrId: string;
+    let plrId: string | null;
     async function fetchData() {
+      await Requests.retry_api();
+      const p_id = searchParams.get("playerId");
       try {
-        const p_id = searchParams.get("playerId")
-        const response = await fetch(`${API}/api/games`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            id: p_id == undefined ? null : p_id
-          })
-        });
-
-        if (!response.ok) {
-          setGameInfo(`HTTP Error! Status: ${response.status}`)
-          throw new Error(`HTTP Error! Status: ${response.status}`)
-        }
-        
-        const [result, serverId]: [{
-          player_id: string,
-          game_id: string,
-          team: number,
-          state: GameState
-        }, string] = await response.json();
-
+        const result = await Requests.get_initial_game(p_id == undefined ? null : p_id);
         console.log("server returned initial state");
         console.log(result);
         setGameInfo({game_id:result.game_id, team:result.team});
-        setServerId(serverId);
         setSearchParams({ playerId: result.player_id })
         plrId = result.player_id;
         setGameState(result.state);
       } catch (error) {
-        if (error instanceof Error && error.name !== "AbortError")
-          setGameInfo(`Error in fetching! ${error}`);
-          return;
+        if (error instanceof Response)
+          setGameInfo(`HTTP Error while fetching! Status: ${error.status}`)
+        else if (error instanceof Error) {
+          setGameInfo(error.toString())
+        }
+        plrId = null;
+        throw error
       }
+
     }
     fetchData()
     let isMounted = true;
     let timerId: number | undefined;
 
     async function poll() {
+      if (plrId === null) {
+        return;
+      }
       try {
-        const response = await fetch(`${API}/api/games/${plrId}`, {method: "GET"});
-
-        if (!response.ok) {
-          throw response
-        }
-        
-        const result: [GameState, string] = await response.json();
-        if (isMounted) {
-          setGameState(result[0]);
-          setServerId(result[1]);
+        if (plrId != undefined) {
+          const response = await Requests.get_game(plrId);
+          if (isMounted) {
+            setGameState(response)
+          }
         }
       } catch (error) {
-        // if (error instanceof Response && error.url == `${API}/api/games/${searchParams.get("playerId")}`) {
         if (error instanceof Response) {
           setGameInfo(`HTTP Error! Status: ${error.status}, URL: ${error.url}`)
           return;
@@ -218,7 +199,6 @@ function StackFour() {
           team={gameInfo.team}
           setGameInfo={setGameInfo}
           setGameState={setGameState}
-          setServerId={setServerId}
           
           style={{
             position: "absolute",

@@ -11,7 +11,7 @@ use crate::types::{GameInfo, GameState, GameStateSQL, SqlError, Team, Winner};
 
 type DBPool = State<Arc<PgPool>>;
 
-pub async fn new_game(State(pool): DBPool, Json(payload): Json<NewGameRequest>) -> Result<Json<(GameInfo, Uuid)>,SqlError> {
+pub async fn new_game(State(pool): DBPool, Json(payload): Json<NewGameRequest>) -> Result<Json<GameInfo>,SqlError> {
     println!("received new game request");
 
     let mut tx = pool.begin().await.unwrap();
@@ -31,15 +31,14 @@ WHERE player_id = $1")
                 .fetch_optional(&mut *tx).await?;
             if let Some(gstate_sql) = gstate_sql {
                 tx.commit().await?;
-                return Ok(Json((
+                return Ok(Json(
                    GameInfo {
                         player_id,
                         team,
                         game_id,
                         state: gstate_sql.into_gamestate()
                     },
-                    *INSTANCE_ID
-                )));
+                ));
             } else {
                 query("DELETE FROM players WHERE player_id = $1")
                     .bind(player_id)
@@ -86,18 +85,17 @@ RETURNING player_id;")
         .fetch_one(&mut *tx).await?;
 
     tx.commit().await?;
-    Ok(Json((
+    Ok(Json(
         GameInfo {
             player_id: pdata,
             game_id: gstate_sql.game_id,
             team: if gstate_sql.lonely {gstate_sql.turn.opposite()} else {gstate_sql.turn},
             state: gstate_sql.into_gamestate()
-        },
-        *INSTANCE_ID
-    )))
+        }
+    ))
 }
 
-pub async fn get_game(Path(player_id):Path<Uuid>, State(pool): DBPool) -> Result<Json<(GameState,Uuid)>,SqlError> {
+pub async fn get_game(Path(player_id):Path<Uuid>, State(pool): DBPool) -> Result<Json<GameState>,SqlError> {
     println!("received get game request");
     dbg!(&player_id);
     let mut tx = pool.begin().await?;
@@ -111,10 +109,10 @@ RETURNING games.*")
         .fetch_one(&mut *tx).await?;
 
     tx.commit().await?;
-    Ok(Json((gstate_sql.into_gamestate(),*INSTANCE_ID)))
+    Ok(Json(gstate_sql.into_gamestate()))
 }
 
-pub async fn drop_piece(Path(player_id):Path<Uuid>, State(pool): DBPool, Json(payload):Json<json_layouts::DropChipRequest>) -> Result<Json<(GameState,Uuid)>,(StatusCode, String)> {
+pub async fn drop_piece(Path(player_id):Path<Uuid>, State(pool): DBPool, Json(payload):Json<json_layouts::DropChipRequest>) -> Result<Json<GameState>,(StatusCode, String)> {
     println!("received drop piece request");
     if payload.column >= COLUMNS {
         return Err((StatusCode::BAD_REQUEST, "Column requested exceeds max amount of columns".to_string()));
@@ -166,10 +164,10 @@ RETURNING *")
         .fetch_one(&mut *tx).await.map_err(|e|(StatusCode::BAD_REQUEST, e.to_string()))?;
 
     tx.commit().await.map_err(|e|(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-    Ok(Json((updated_gstate_sql.into_gamestate(),*INSTANCE_ID)))
+    Ok(Json(updated_gstate_sql.into_gamestate()))
 }
 
-pub async fn restart_game(Path(player_id):Path<Uuid>, State(pool): DBPool) -> Result<Json<(GameState,Uuid)>,SqlError> {
+pub async fn restart_game(Path(player_id):Path<Uuid>, State(pool): DBPool) -> Result<Json<GameState>,SqlError> {
     println!("recieved restart game request");
 
     let mut tx = pool.begin().await?;
@@ -191,5 +189,5 @@ RETURNING *;")
         .fetch_one(&mut *tx).await?;
 
     tx.commit().await?;
-    Ok(Json((gstate_sql.into_gamestate(),*INSTANCE_ID)))
+    Ok(Json(gstate_sql.into_gamestate()))
 }

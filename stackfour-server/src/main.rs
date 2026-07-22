@@ -81,6 +81,7 @@ CREATE TABLE IF NOT EXISTS players (
         .route("/api/games/{id}", get(requests::get_game))
         .route("/api/games/{id}/drop", post(requests::drop_piece))
         .route("/api/games/{id}/restart", post(requests::restart_game))
+        .route("/api/id", get(|| async {INSTANCE_ID.to_string()}))
         .route("/health", get(|| async {"ok"}))
         .with_state(data.clone())
         .layer(CorsLayer::new().allow_methods(Any).allow_origin(Any).allow_headers(Any))
