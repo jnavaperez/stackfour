@@ -3,14 +3,20 @@ services:
     build:
       dockerfile: ../docker/Dockerfile-react
       context: ../stackfour-react
+      args:
+        API_SERVER_INSTANCES_AMOUNT: 3
+    deploy:
+      replicas: 3
     ports:
-      - "80-83:80"
+      - "80-82:80"
   backend:
     build:
       dockerfile: ../docker/Dockerfile-server
       context: ../stackfour-server
+    deploy:
+      replicas: 3
     ports:
-      - "8081-8084:8081"
+      - "8081-8083:8081"
   db:
     image: postgres:latest
     restart: always

@@ -2,8 +2,7 @@ import { type GameState, type GameInfo } from "./StackFour";
 import ColumnComponent from "./ColumnComponent";
 import type { Dispatch, SetStateAction } from "react";
 import type React from "react";
-
-const API = import.meta.env.VITE_API_URL + (8081 + Math.round(Math.random())) ;
+import * as Requests from "./requests"
 
 interface props {
     state:GameState;
@@ -11,14 +10,13 @@ interface props {
     team: number;
     setGameInfo:Dispatch<SetStateAction<GameInfo | string | null>>;
     setGameState:Dispatch<SetStateAction<GameState | null>>;
-    setServerId:Dispatch<SetStateAction<string>>;
     style?: React.CSSProperties;
 }
 
 if (import.meta.env.DEV) console.log("DEV MODE");
 else if (import.meta.env.PROD) console.log("PROD MODE");
 
-function GameBoard({ state, id, team, setGameInfo, setGameState, setServerId, style }:props) {
+function GameBoard({ state, id, team, setGameInfo, setGameState, style }:props) {
   return <div
     style={{
       display: "flex",
@@ -68,28 +66,17 @@ function GameBoard({ state, id, team, setGameInfo, setGameState, setServerId, st
             if (state.turn != team) return
             console.log("requesting a drop");
             try {
-                const response = await fetch(`${API}/api/games/${id}/drop`, {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify({
-                        column: index,
-                        team: state.turn
-                    })
-                });
-
-                if (!response.ok) {
-                    setGameInfo(`HTTP Error! Status: ${response.status}`)
-                    throw new Error(`HTTP Error! Status: ${response.status}`)
-                }
                 
-                const result: [GameState, string] = await response.json();
+                const result: GameState = await Requests.drop_piece(id, index, state.turn);
                 console.log(result);
-                setGameState(result[0])
-                setServerId(result[1])
+                setGameState(result);
             } catch (error) {
+              if (error instanceof Response) {
+                setGameInfo(`HTTP Error! Status: ${error.status}`)
+              } else {
                 setGameInfo(`Error in fetching! ${error}`);
+                throw error;
+              }
             }
           }}
         />
@@ -98,19 +85,12 @@ function GameBoard({ state, id, team, setGameInfo, setGameState, setServerId, st
     <button onClick={async () => {
         console.log("restarting game..");
         try {
-            const response = await fetch(`${API}/api/games/${id}/restart`, {
-                method: "POST"
-            });
-
-            if (!response.ok) {
-                setGameInfo(`HTTP Error! Status: ${response.status}`)
-                throw new Error(`HTTP Error! Status: ${response.status}`)
-            }
-            
-            const result: [GameState,string] = await response.json();
-            setGameState(result[0])
-            setServerId(result[1])
+            const result: GameState = await Requests.restart_game(id)
+            setGameState(result);
         } catch (error) {
+            if (error instanceof Response) {
+                setGameInfo(`HTTP Error! Status: ${error.status}`);
+            }
             setGameInfo(`Error in fetching! ${error}`);
         }
     }}>
