@@ -34,6 +34,7 @@ function StackFour() {
   const [gameInfo, setGameInfo] = useState<GameInfo|string|null>(null)
   const [gameState, setGameState] = useState<GameState|null>(null);
   const [serverId, setServerId] = useState<string>("");
+  const [webHostname, setWebHostname] = useState<string>("");
   const [prevWinState, setPrevWinState] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -51,6 +52,12 @@ function StackFour() {
       return
     };
     Requests.setStateFunctions(setGameInfo, setServerId);
+    console.log("Getting web server ID");
+    async function fetchHostname() {
+      const result = await fetch("/hostname");
+      setWebHostname(await result.text());
+    }
+    fetchHostname();
     console.log("Contacting server for initial game state...");
     const controller = new AbortController;
     let plrId: string | null;
@@ -191,7 +198,9 @@ function StackFour() {
         backgroundImage: `linear-gradient(to top, ${gameInfo.team == 1 ? "midnightblue" : "rgb(80, 10, 15)"} 0%, rgba(0,0,255,0) 50%)`,
         minHeight: "100vh"
       }}>
-        <b style={{color:"gray",fontSize:"15px",padding:"5px 10px", maxHeight:"15px"}}>instance id: {serverId}<br/>game id: {gameInfo.game_id}</b>
+        <b style={{color:"gray",fontSize:"15px",padding:"5px 10px", maxHeight:"15px"}}>
+          web server: {webHostname}<br/>api server: {serverId}<br/>game id: {gameInfo.game_id}
+          </b>
         <GameBoard
           state={gameState}
           // @ts-expect-error - playerID is guaranteed to not be undefined if they are even seeing the gameboard 
