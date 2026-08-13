@@ -124,7 +124,12 @@ WHERE last_accessed < now() - INTERVAL '30 minutes';
     });
 
     println!("Listening on: {}", listener.local_addr().unwrap());
-    axum::serve(listener, app).await.unwrap();
+    axum::serve(listener, app)
+        .with_graceful_shutdown(async {
+            tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
+            .expect("failed to install sigterm handler").recv().await;
+        })
+        .await.unwrap();
 }
 
 // #[derive(Default)]

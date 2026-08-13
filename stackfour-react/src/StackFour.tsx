@@ -33,7 +33,7 @@ type Winner =
 function StackFour() {
   const [gameInfo, setGameInfo] = useState<GameInfo|string|null>(null)
   const [gameState, setGameState] = useState<GameState|null>(null);
-  const [serverId, setServerId] = useState<string>("");
+  // const [serverId, setServerId] = useState<string>("");
   const [webHostname, setWebHostname] = useState<string>("");
   const [prevWinState, setPrevWinState] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -51,18 +51,20 @@ function StackFour() {
       hasFetchedInitial.current = true
       return
     };
-    Requests.setStateFunctions(setGameInfo, setServerId);
+    Requests.setStateFunctions(setGameInfo);
     console.log("Getting web server ID");
-    async function fetchHostname() {
-      const result = await fetch("/hostname");
-      setWebHostname(await result.text());
-    }
-    fetchHostname();
+    // async function fetchHostname() {
+    //   const result = await fetch("/hostname");
+    //   setWebHostname(await result.text());
+    // }
+    // fetchHostname();
+    const hostname = document.querySelector('meta[name="frontend-name"]')?.getAttribute("content");
+    setWebHostname(hostname == null ? "error getting hostname" : hostname);
     console.log("Contacting server for initial game state...");
     const controller = new AbortController;
     let plrId: string | null;
     async function fetchData() {
-      await Requests.retry_api();
+      // await Requests.retry_api();
       const p_id = searchParams.get("playerId");
       try {
         const result = await Requests.get_initial_game(p_id == undefined ? null : p_id);
@@ -172,14 +174,26 @@ function StackFour() {
   return <div>
     {gameInfo == null ?
       <div style={{
+        position: "relative",
         display:"flex",
-        justifyContent:"center",
-        alignItems:"center",
-        height:"100vh",
+        flexDirection: "column",
+        justifyContent:"left",
+        minHeight:"100vh",
       }}>
-        <ClockLoader
-          color={"lightgray"}
-        />
+        <b style={{color:"gray",fontSize:"15px",padding:"5px 10px", maxHeight:"15px"}}>
+          web server: {webHostname}<br/>
+          </b>
+        <div style={{
+          display:"flex",
+          justifyContent:"center",
+          alignItems:"center",
+          height:"100vh",
+          width:"100%"
+        }}>
+          <ClockLoader
+            color={"lightgray"}
+          />
+        </div>
       </div>
     : (typeof gameInfo == "string") ?  
       <div style={{
@@ -199,7 +213,7 @@ function StackFour() {
         minHeight: "100vh"
       }}>
         <b style={{color:"gray",fontSize:"15px",padding:"5px 10px", maxHeight:"15px"}}>
-          web server: {webHostname}<br/>api server: {serverId}<br/>game id: {gameInfo.game_id}
+          web server: {webHostname}<br/>game id: {gameInfo.game_id}
           </b>
         <GameBoard
           state={gameState}

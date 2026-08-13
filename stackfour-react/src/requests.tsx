@@ -2,54 +2,58 @@ import type { Dispatch, SetStateAction } from "react";
 import type { GameInfo, GameState } from "./StackFour";
 
 let setGameInfo: Dispatch<SetStateAction<GameInfo | string | null>>;
-let setServerId: Dispatch<SetStateAction<string>>;
+// let setServerId: Dispatch<SetStateAction<string>>;
 export function setStateFunctions(
     GameInfo: Dispatch<SetStateAction<GameInfo | string | null>>,
-    ServerId: Dispatch<SetStateAction<string>>
+    // ServerId: Dispatch<SetStateAction<string>>
 ) {
     setGameInfo = GameInfo;
-    setServerId = ServerId;
+    // setServerId = ServerId;
 }
 
-const AMOUNT_API_INSTANCES = import.meta.env.VITE_API_SERVER_INSTANCES_AMOUNT;
-export async function retry_api() {
-    const possibilities: string[] = [];
-    const responses: Response[] = [];
+// const AMOUNT_API_INSTANCES = import.meta.env.VITE_API_SERVER_INSTANCES_AMOUNT;
+// export async function retry_api() {
+//     const possibilities: string[] = [];
+//     const responses: Response[] = [];
     
-    console.log("finding a new api server...");
-    for (let i = 0; i < AMOUNT_API_INSTANCES;i++) {
-        possibilities.push(ENV_API + (8081+i).toString());
-    }
-    while (possibilities.length > 0) {
-        const chosen_index = Math.floor(Math.random()*possibilities.length);
-        try {
-            const response = await fetch(`${possibilities[chosen_index]}/api/id`);
-            if (!response.ok) {
-                responses.push(response);
-                possibilities.splice(chosen_index,1)
-                continue;
-            }
-            api_url = possibilities[chosen_index];
-            setServerId(await response.text());
-            console.log("chose new API server: "+api_url);
-            return;
-        } catch {
-            possibilities.splice(chosen_index,1);
-            continue;
-        }
-    }
-    let answer = `Could not contact any of the API servers. ${
-        responses.length > 0 ? "\nSome servers returned responses:" : ""
-    }`;
-    for (let i=0;i<responses.length;i++) {
-        answer += "\n"+responses[i]
-    }
-    setGameInfo(answer) 
-    throw new Error("Couldn't connect to any API servers");
+//     console.log("finding a new api server...");
+//     for (let i = 0; i < AMOUNT_API_INSTANCES;i++) {
+//         possibilities.push(ENV_API + (8081+i).toString());
+//     }
+//     while (possibilities.length > 0) {
+//         const chosen_index = Math.floor(Math.random()*possibilities.length);
+//         try {
+//             const response = await fetch(`${possibilities[chosen_index]}/api/id`);
+//             if (!response.ok) {
+//                 responses.push(response);
+//                 possibilities.splice(chosen_index,1)
+//                 continue;
+//             }
+//             api_url = possibilities[chosen_index];
+//             setServerId(await response.text());
+//             console.log("chose new API server: "+api_url);
+//             return;
+//         } catch {
+//             possibilities.splice(chosen_index,1);
+//             continue;
+//         }
+//     }
+//     let answer = `Could not contact any of the API servers. ${
+//         responses.length > 0 ? "\nSome servers returned responses:" : ""
+//     }`;
+//     for (let i=0;i<responses.length;i++) {
+//         answer += "\n"+responses[i]
+//     }
+//     setGameInfo(answer) 
+//     throw new Error("Couldn't connect to any API servers");
+// }
+export async function retry_api() {
+    setGameInfo("Couldn't connect to API server");
+    throw new Error("Couldn't connect to API server");
 }
-let api_url: string;
+const api_url: string = `http://{window.location.hostname}:8081`;
 
-const ENV_API: string = import.meta.env.VITE_API_URL
+// const ENV_API: string = import.meta.env.VITE_API_URL
 
 export async function get_initial_game(player_id: string | null): Promise<{
             player_id: string,
