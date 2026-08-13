@@ -4,11 +4,10 @@ import Confetti from 'react-confetti';
 import { ClockLoader} from 'react-spinners';
 import { useSearchParams } from "react-router";
 import GameBoard from "./GameBoard";
+import * as Requests from "./requests"
 
 export const ROWS = 6;
 export const COLUMNS = 7;
-
-const API = import.meta.env.VITE_API_URL + (8081+Math.round(Math.random())).toString();
 
 export interface GameState {
   turn: number;
@@ -34,7 +33,8 @@ type Winner =
 function StackFour() {
   const [gameInfo, setGameInfo] = useState<GameInfo|string|null>(null)
   const [gameState, setGameState] = useState<GameState|null>(null);
-  const [serverId, setServerId] = useState<string>("");
+  // const [serverId, setServerId] = useState<string>("");
+  const [webHostname, setWebHostname] = useState<string>("");
   const [prevWinState, setPrevWinState] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -51,66 +51,56 @@ function StackFour() {
       hasFetchedInitial.current = true
       return
     };
+    Requests.setStateFunctions(setGameInfo);
+    console.log("Getting web server ID");
+    // async function fetchHostname() {
+    //   const result = await fetch("/hostname");
+    //   setWebHostname(await result.text());
+    // }
+    // fetchHostname();
+    const hostname = document.querySelector('meta[name="frontend-name"]')?.getAttribute("content");
+    setWebHostname(hostname == null ? "error getting hostname" : hostname);
     console.log("Contacting server for initial game state...");
     const controller = new AbortController;
-    let plrId: string;
+    let plrId: string | null;
     async function fetchData() {
+      // await Requests.retry_api();
+      const p_id = searchParams.get("playerId");
       try {
-        const p_id = searchParams.get("playerId")
-        const response = await fetch(`${API}/api/games`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            id: p_id == undefined ? null : p_id
-          })
-        });
-
-        if (!response.ok) {
-          setGameInfo(`HTTP Error! Status: ${response.status}`)
-          throw new Error(`HTTP Error! Status: ${response.status}`)
-        }
-        
-        const [result, serverId]: [{
-          player_id: string,
-          game_id: string,
-          team: number,
-          state: GameState
-        }, string] = await response.json();
-
+        const result = await Requests.get_initial_game(p_id == undefined ? null : p_id);
         console.log("server returned initial state");
         console.log(result);
         setGameInfo({game_id:result.game_id, team:result.team});
-        setServerId(serverId);
         setSearchParams({ playerId: result.player_id })
         plrId = result.player_id;
         setGameState(result.state);
       } catch (error) {
-        if (error instanceof Error && error.name !== "AbortError")
-          setGameInfo(`Error in fetching! ${error}`);
-          return;
+        if (error instanceof Response)
+          setGameInfo(`HTTP Error while fetching! Status: ${error.status}`)
+        else if (error instanceof Error) {
+          setGameInfo(error.toString())
+        }
+        plrId = null;
+        throw error
       }
+
     }
     fetchData()
     let isMounted = true;
     let timerId: number | undefined;
 
     async function poll() {
+      if (plrId === null) {
+        return;
+      }
       try {
-        const response = await fetch(`${API}/api/games/${plrId}`, {method: "GET"});
-
-        if (!response.ok) {
-          throw response
-        }
-        
-        const result: [GameState, string] = await response.json();
-        if (isMounted) {
-          setGameState(result[0]);
-          setServerId(result[1]);
+        if (plrId != undefined) {
+          const response = await Requests.get_game(plrId);
+          if (isMounted) {
+            setGameState(response)
+          }
         }
       } catch (error) {
-        // if (error instanceof Response && error.url == `${API}/api/games/${searchParams.get("playerId")}`) {
         if (error instanceof Response) {
           setGameInfo(`HTTP Error! Status: ${error.status}, URL: ${error.url}`)
           return;
@@ -184,14 +174,26 @@ function StackFour() {
   return <div>
     {gameInfo == null ?
       <div style={{
+        position: "relative",
         display:"flex",
-        justifyContent:"center",
-        alignItems:"center",
-        height:"100vh",
+        flexDirection: "column",
+        justifyContent:"left",
+        minHeight:"100vh",
       }}>
-        <ClockLoader
-          color={"lightgray"}
-        />
+        <b style={{color:"gray",fontSize:"15px",padding:"5px 10px", maxHeight:"15px"}}>
+          web server: {webHostname}<br/>
+          </b>
+        <div style={{
+          display:"flex",
+          justifyContent:"center",
+          alignItems:"center",
+          height:"100vh",
+          width:"100%"
+        }}>
+          <ClockLoader
+            color={"lightgray"}
+          />
+        </div>
       </div>
     : (typeof gameInfo == "string") ?  
       <div style={{
@@ -210,7 +212,9 @@ function StackFour() {
         backgroundImage: `linear-gradient(to top, ${gameInfo.team == 1 ? "midnightblue" : "rgb(80, 10, 15)"} 0%, rgba(0,0,255,0) 50%)`,
         minHeight: "100vh"
       }}>
-        <b style={{color:"gray",fontSize:"15px",padding:"5px 10px", maxHeight:"15px"}}>instance id: {serverId}<br/>game id: {gameInfo.game_id}</b>
+        <b style={{color:"gray",fontSize:"15px",padding:"5px 10px", maxHeight:"15px"}}>
+          web server: {webHostname}<br/>game id: {gameInfo.game_id}
+          </b>
         <GameBoard
           state={gameState}
           // @ts-expect-error - playerID is guaranteed to not be undefined if they are even seeing the gameboard 
@@ -218,7 +222,6 @@ function StackFour() {
           team={gameInfo.team}
           setGameInfo={setGameInfo}
           setGameState={setGameState}
-          setServerId={setServerId}
           
           style={{
             position: "absolute",
